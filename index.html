@@ -1,0 +1,675 @@
+<title>Dekoder Shortów</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Układ: lewa kolumna to ekran 9:16 z osią czasu i nagrywaniem, prawa to edytor kodu sceny. Na telefonie jedna kolumna. */
+:root{
+  --bg:#eceef4; --surface:#fafbfe; --ink:#141622; --muted:#586078; --line:#d3d8e6;
+  --accent:#3647f5; --accent-ink:#ffffff; --rec:#d92a25; --rec-ink:#ffffff;
+  --warn:#9a5200; --code-bg:#f2f4fa; --screen:#05060c; --screen-ink:#ffffff;
+  --font-display:"Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body:"Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1018; --surface:#171a28; --ink:#eceef8; --muted:#9aa1ba; --line:#292d42;
+    --accent:#8793ff; --accent-ink:#0e1018; --rec:#ff5a52; --rec-ink:#14060a;
+    --warn:#ffb454; --code-bg:#121522; --screen:#05060c; --screen-ink:#ffffff;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1018; --surface:#171a28; --ink:#eceef8; --muted:#9aa1ba; --line:#292d42;
+  --accent:#8793ff; --accent-ink:#0e1018; --rec:#ff5a52; --rec-ink:#14060a;
+  --warn:#ffb454; --code-bg:#121522; --screen:#05060c; --screen-ink:#ffffff;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink);
+  font:400 15px/1.55 var(--font-body);
+  padding-block:20px 44px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap{max-width:1040px;margin:0 auto}
+.mast{display:grid;gap:12px;margin-bottom:26px}
+.bars{display:flex;width:112px;height:8px;border-radius:2px;overflow:hidden}
+.bars span{flex:1}
+h1{margin:0;font:800 clamp(30px,7vw,42px)/1.04 var(--font-display);letter-spacing:-0.025em;text-wrap:balance}
+.lead{margin:0;color:var(--muted);max-width:58ch;text-wrap:pretty}
+.app{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:36px;align-items:start}
+.stage,.editor{display:grid;gap:14px;min-width:0}
+.screen{
+  position:relative;aspect-ratio:9/16;width:min(100%,340px);margin-inline:auto;
+  background:var(--screen);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+}
+.screen canvas{display:block;width:100%;height:100%}
+.badge{
+  position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:7px;
+  padding:4px 9px;border-radius:6px;background:rgba(0,0,0,.6);color:var(--screen-ink);
+  font:500 12px var(--font-mono);font-variant-numeric:tabular-nums;
+}
+.badge i{width:9px;height:9px;border-radius:50%;background:var(--rec);animation:blink 1s steps(2,start) infinite}
+@keyframes blink{50%{opacity:.2}}
+@media (prefers-reduced-motion:reduce){.badge i{animation:none}}
+.transport{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
+.tc{font:500 12px var(--font-mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{width:100%;accent-color:var(--accent);min-width:0}
+.opts{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;font-size:13px;color:var(--muted)}
+.opts label{display:inline-flex;align-items:center;gap:8px}
+select{
+  font:500 13px var(--font-body);padding:8px 10px;min-height:40px;border-radius:8px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+}
+.cap{margin:0;font:400 12px/1.5 var(--font-mono);color:var(--muted)}
+.btn{
+  font:600 14px var(--font-body);min-height:44px;padding:9px 16px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.rec{background:var(--rec);border-color:var(--rec);color:var(--rec-ink)}
+.btn:disabled{opacity:.45;cursor:default}
+:is(.btn,select,input,textarea,summary):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.recbox{display:grid;gap:10px}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px}
+.note{margin:0;font-size:13px;color:var(--muted);text-wrap:pretty}
+.result{width:min(100%,200px);aspect-ratio:9/16;border-radius:10px;background:var(--screen)}
+.ed-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ed-head label{font:800 18px var(--font-display);letter-spacing:-0.01em}
+.meta{font:400 12px var(--font-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+textarea{
+  width:100%;min-height:320px;resize:vertical;padding:12px;border-radius:8px;
+  border:1px solid var(--line);background:var(--code-bg);color:var(--ink);
+  font:400 13.5px/1.55 var(--font-mono);tab-size:2;white-space:pre;overflow:auto;
+}
+@media (pointer:coarse){textarea{font-size:16px}}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:4px;font:400 12.5px/1.45 var(--font-mono);color:var(--warn)}
+.log b{font-weight:500;margin-right:8px}
+.ref summary{cursor:pointer;font-weight:600;padding:6px 0}
+.ref pre{
+  margin:8px 0 0;padding:12px;overflow-x:auto;border-radius:8px;border:1px solid var(--line);
+  background:var(--code-bg);font:400 12px/1.65 var(--font-mono);white-space:pre;
+}
+@media (max-width:780px){.app{grid-template-columns:minmax(0,1fr);gap:26px}}
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="bars" aria-hidden="true">
+      <span style="background:#c0c0c0"></span><span style="background:#c0c000"></span><span style="background:#00c0c0"></span><span style="background:#00c000"></span><span style="background:#c000c0"></span><span style="background:#c00000"></span><span style="background:#0000c0"></span>
+    </div>
+    <h1>Dekoder Shortów</h1>
+    <p class="lead">Wklej kod sceny napisany przez Claude'a. Zamienia się w animację 9:16, którą podejrzysz i nagrasz jako plik wideo.</p>
+  </header>
+
+  <main class="app">
+    <section class="stage" aria-label="Podgląd i nagrywanie">
+      <div class="screen">
+        <canvas id="cv" width="1080" height="1920"></canvas>
+        <div class="badge" id="badge" hidden><i></i><span>REC</span><span id="badgeT">00:00.0</span></div>
+      </div>
+      <div class="transport">
+        <button class="btn primary" id="play" type="button">Odtwórz</button>
+        <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Pozycja na osi czasu">
+        <output class="tc" id="tc">00:00.0 / 00:00.0</output>
+      </div>
+      <div class="opts">
+        <label><input type="checkbox" id="loop" checked> Zapętl podgląd</label>
+        <label for="res">Rozdzielczość
+          <select id="res"><option value="1080" selected>1080 × 1920</option><option value="720">720 × 1280</option></select>
+        </label>
+      </div>
+      <p class="cap" id="cap"></p>
+      <div class="recbox">
+        <div class="btnrow">
+          <button class="btn rec" id="rec" type="button">Nagraj wideo</button>
+          <button class="btn primary" id="save" type="button" hidden>Zapisz plik</button>
+        </div>
+        <p class="note" id="note">Nagrywanie trwa tyle, ile film. Nie przełączaj karty ani aplikacji w jego trakcie. Dźwięku nie ma, głos dodasz w edytorze wideo.</p>
+        <video class="result" id="result" controls playsinline hidden></video>
+      </div>
+    </section>
+
+    <section class="editor" aria-label="Kod sceny">
+      <div class="ed-head"><label for="code">Kod sceny</label><span class="meta" id="meta"></span></div>
+      <textarea id="code" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+      <ul class="log" id="log" hidden></ul>
+      <div class="btnrow">
+        <button class="btn" id="demo" type="button">Załaduj przykład</button>
+        <button class="btn" id="copy" type="button">Kopiuj opis formatu</button>
+        <button class="btn" id="clear" type="button">Wyczyść</button>
+      </div>
+      <p class="note">Opis formatu wklejasz do nowej rozmowy z Claude'em, żeby od razu pisał sceny w tym języku.</p>
+      <details class="ref" id="ref">
+        <summary>Ściąga formatu</summary>
+        <pre id="spec"></pre>
+      </details>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var DEMO = `// Przykład: scena pokazowa. Zastąp ją własnym kodem.
+bg #0b1030 #35185f
+dur 9
+pt 0- 50 88.9 100 178 n=90 sz=0.35 vy=-3 seed=7 tw=0.5 f=#d6deff
+c 0- 50 92 21 f=#2b59ff glow=5 pulse=0.04,0.5 pop=0.7
+p 0.8- 50 92 34 n=5 in=0.45 f=none s=#ffd166 lw=0.6 glow=2 spin=360 an=9 fi=0.6
+g 1.2- 50 92 ".00.00./0111111/0111111/.11111./..111../...1..." cell=2.6 pal=#ffffff,#ff3d71 bob=2,0.7 pop=0.4
+t 0.5- 50 28 "Claude pisze kod|a ty dostajesz wideo" sz=6.5 mw=90 fi=0.6
+t 3-9 50 146 "Tekst zamienia się w klatki" sz=5 f=#ffd166 tw=2
+t 6-9 50 126 "cyfra = kolor piksela" sz=4.2 f=#7df9ff pop=0.4
+l 4-9 22 160 78 160 s=#7df9ff lw=0.5 glow=1.5 fi=0.5`;
+
+var SPEC = `KANWA 100 x 177.8 jednostek (9:16), początek (0,0) w lewym górnym rogu, czas w sekundach.
+Jedna komenda na linię. Teksty w "cudzysłowie" (| = nowa linia). Komentarz: //
+
+bg #kolor [#kolor2]       tło, drugi kolor robi gradient pionowy
+dur 12                    długość filmu (domyślnie koniec ostatniego elementu)
+
+<typ> <od>-<do> <parametry> [klucz=wartość ...]    (brak <do> = do końca filmu)
+c  0-4 x y r              koło
+r  0-4 x y w h  [rad=]    prostokąt, środek w x,y
+l  0-4 x1 y1 x2 y2        linia (s=kolor lw=grubość)
+p  0-4 x y r  [n=5 in=0.5]   wielokąt lub gwiazda (in = ułamek promienia)
+t  0-4 x y "Tekst|druga linia"  [sz=7 al=c|l|r mw=80 lh=1.2 tw=2 b=0 font=...]
+g  0-4 x y "0110/1221/0110" [cell=2 pal=#000,#f00,#ff0]
+                          siatka pikseli: cyfra lub litera = numer koloru z pal, . = pusto
+pt 0-9 x y w h [n=80 sz=0.5 vx=0 vy=8 seed=1 tw=1]   cząsteczki w prostokącie
+
+Wspólne: f=wypełnienie (none = brak, domyślnie #fff)  s=obrys  lw=grubość obrysu  o=krycie 0-1
+  rot=obrót w stopniach  glow=poświata  gc=kolor poświaty  fi=/fo= pojawianie/znikanie w s
+  pop=0.3 wskakiwanie  mv=x,y ruch do punktu  sc=2 skala do  spin=360 obrót o
+  an=czas animacji (domyślnie całe życie)  ease=lin|in|out|io  bob=amp,hz  pulse=amp,hz
+tw=2 w tekście: pisanie litera po literze przez 2 s.
+Kolejność linii = kolejność rysowania, pierwsze są na spodzie.`;
+
+//#PARSER-START
+var CW = 100, CH = 100 * 16 / 9;
+var FONT = '"Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+var NUMK = {};
+'o lw rot glow fi fo pop sc spin an sz rad n in cell vx vy seed tw mw lh b'.split(' ').forEach(function(x){ NUMK[x] = 1; });
+var PAIRK = { mv: 1, bob: 1, pulse: 1 };
+var STRK = { f: 1, s: 1, gc: 1, ease: 1, font: 1, al: 1 };
+var POS = {
+  c: ['x','y','r'], r: ['x','y','w','h'], l: ['x1','y1','x2','y2'], t: ['x','y','text'],
+  p: ['x','y','r'], g: ['x','y','rows'], pt: ['x','y','w','h']
+};
+
+function tokenize(line){
+  var re = /(?:[A-Za-z_]+=)?"(?:[^"\\]|\\.)*"|\S+/g, out = [], m;
+  while ((m = re.exec(line))) out.push(m[0]);
+  return out;
+}
+function unq(s){
+  if (s.length >= 2 && s.charAt(0) === '"' && s.charAt(s.length - 1) === '"') return s.slice(1, -1).replace(/\\(["\\])/g, '$1');
+  return s;
+}
+function isKey(t){ return /^[A-Za-z_]+=/.test(t); }
+function num(s, what){
+  if (!/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(s)) throw new Error('"' + s + '" nie jest liczbą (' + what + ')');
+  return parseFloat(s);
+}
+function parseRange(tok){
+  var m = /^(\d*\.?\d*)-(\d*\.?\d*)$/.exec(tok), a, b;
+  if (m){
+    a = m[1] === '' ? 0 : parseFloat(m[1]);
+    b = m[2] === '' ? Infinity : parseFloat(m[2]);
+  } else if (/^(\d+\.?\d*|\.\d+)$/.test(tok)){
+    a = parseFloat(tok); b = Infinity;
+  } else return null;
+  if (isNaN(a) || isNaN(b) || !(b > a)) return null;
+  return [a, b];
+}
+
+function parse(src){
+  var lines = String(src).split(/\r?\n/), items = [], errors = [], bg = ['#000'], dur = null;
+  lines.forEach(function(raw, i){
+    var s = raw.trim();
+    if (!s || s.slice(0, 2) === '//') return;
+    var tk = tokenize(s), kind = tk[0].toLowerCase();
+    try {
+      if (kind === 'bg'){
+        var cs = tk.slice(1).filter(function(x){ return !isKey(x); });
+        if (!cs.length) throw new Error('bg wymaga koloru, np. bg #101828 #3b1d6e');
+        bg = cs.slice(0, 2);
+        return;
+      }
+      if (kind === 'dur'){ dur = num(tk[1] || '', 'dur'); return; }
+      if (!POS[kind]) throw new Error('nieznana komenda "' + tk[0] + '"');
+      var rg = tk[1] ? parseRange(tk[1]) : null;
+      if (!rg) throw new Error('po "' + kind + '" oczekiwano zakresu czasu, np. 0-4 lub 2-');
+      var pos = [], keys = [];
+      tk.slice(2).forEach(function(x){ (isKey(x) ? keys : pos).push(x); });
+      var names = POS[kind], v = {}, it = { kind: kind, a: rg[0], b: rg[1], line: i + 1, v: v, k: {} };
+      if (pos.length < names.length) throw new Error(kind + ' wymaga: ' + names.join(' '));
+      names.forEach(function(nm, j){
+        if (nm === 'text') v.text = pos.slice(j).map(unq).join(' ').replace(/\\n|\|/g, '\n');
+        else if (nm === 'rows') v.rows = unq(pos[j]);
+        else v[nm] = num(pos[j], nm);
+      });
+      if (kind === 'l'){
+        v.dx = v.x2 - v.x1; v.dy = v.y2 - v.y1;
+        v.x = (v.x1 + v.x2) / 2; v.y = (v.y1 + v.y2) / 2;
+      }
+      keys.forEach(function(kv){
+        var m = /^([A-Za-z_]+)=([\s\S]*)$/.exec(kv), key = m[1].toLowerCase(), val = unq(m[2]);
+        try {
+          if (NUMK[key]) it.k[key] = num(val, key);
+          else if (PAIRK[key]){
+            var pr = val.split(',').map(function(z){ return num(z.trim(), key); });
+            if (pr.length < 2) throw new Error(key + ' wymaga dwóch liczb, np. ' + key + '=2,0.5');
+            it.k[key] = pr;
+          }
+          else if (key === 'pal') it.k.pal = val.split(',').map(function(z){ return z.trim(); }).filter(Boolean);
+          else if (STRK[key]) it.k[key] = val;
+          else throw new Error('nieznany parametr "' + key + '"');
+        } catch (e){ errors.push({ line: i + 1, msg: e.message, warn: true }); }
+      });
+      items.push(it);
+    } catch (e){ errors.push({ line: i + 1, msg: e.message }); }
+  });
+  var mx = 0, fin = false, ma = 0;
+  items.forEach(function(it){
+    if (it.b !== Infinity){ mx = Math.max(mx, it.b); fin = true; }
+    ma = Math.max(ma, it.a);
+  });
+  if (dur === null) dur = fin ? mx : (items.length ? ma + 3 : 5);
+  dur = Math.min(180, Math.max(0.5, dur));
+  return { items: items, bg: bg, dur: dur, errors: errors };
+}
+
+function clamp01(k){ return k < 0 ? 0 : k > 1 ? 1 : k; }
+function ease(k, name){
+  k = clamp01(k);
+  if (name === 'lin') return k;
+  if (name === 'in') return k * k * k;
+  if (name === 'out') return 1 - Math.pow(1 - k, 3);
+  return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+}
+function backOut(k){
+  k = clamp01(k);
+  var c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
+}
+function mod(a, b){ return ((a % b) + b) % b; }
+function rng(seed){
+  var a = seed | 0;
+  return function(){
+    a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function roundRectPath(ctx, x, y, w, h, r){
+  r = Math.max(0, Math.min(r || 0, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+function wrapText(ctx, text, mw){
+  var out = [];
+  text.split('\n').forEach(function(par){
+    if (!(mw > 0)){ out.push(par); return; }
+    var words = par.split(/\s+/).filter(Boolean), cur = '';
+    if (!words.length){ out.push(''); return; }
+    words.forEach(function(w){
+      var test = cur ? cur + ' ' + w : w;
+      if (cur && ctx.measureText(test).width > mw){ out.push(cur); cur = w; } else cur = test;
+    });
+    out.push(cur);
+  });
+  return out;
+}
+
+function drawItem(ctx, sc, it, t, S){
+  var k = it.k, v = it.v, end = it.b === Infinity ? sc.dur : it.b, u = t - it.a;
+  var life = Math.max(end - it.a, 0.001);
+  var an = k.an > 0 ? k.an : life, e = ease(u / an, k.ease);
+  var x = v.x, y = v.y;
+  if (k.mv){ x += (k.mv[0] - v.x) * e; y += (k.mv[1] - v.y) * e; }
+  if (k.bob) y += k.bob[0] * Math.sin(6.2832 * k.bob[1] * u);
+  var s = 1;
+  if (k.sc != null) s = 1 + (k.sc - 1) * e;
+  if (k.pulse) s *= 1 + k.pulse[0] * Math.sin(6.2832 * k.pulse[1] * u);
+  if (k.pop > 0) s *= Math.max(0.0001, backOut(u / k.pop));
+  var rot = ((k.rot || 0) + (k.spin ? k.spin * e : 0)) * Math.PI / 180;
+  var al = k.o == null ? 1 : k.o;
+  if (k.fi > 0 && u < k.fi) al *= u / k.fi;
+  if (k.fo > 0 && end - t < k.fo) al *= Math.max(0, (end - t) / k.fo);
+  if (al <= 0) return;
+  var fill = k.f === undefined ? '#fff' : (k.f === 'none' ? null : k.f);
+  var stroke = (k.s && k.s !== 'none') ? k.s : null;
+  var i, j;
+  ctx.save();
+  ctx.globalAlpha = al;
+  ctx.translate(x, y);
+  if (rot) ctx.rotate(rot);
+  if (s !== 1) ctx.scale(s, s);
+  if (k.glow > 0){ ctx.shadowColor = k.gc || fill || stroke || '#fff'; ctx.shadowBlur = k.glow * S * s; }
+  switch (it.kind){
+    case 'c':
+      ctx.beginPath(); ctx.arc(0, 0, Math.max(0, v.r), 0, 6.2832);
+      if (fill){ ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = k.lw || 0.6; ctx.stroke(); }
+      break;
+    case 'r':
+      roundRectPath(ctx, -v.w / 2, -v.h / 2, v.w, v.h, k.rad);
+      if (fill){ ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = k.lw || 0.6; ctx.stroke(); }
+      break;
+    case 'l':
+      ctx.beginPath(); ctx.moveTo(-v.dx / 2, -v.dy / 2); ctx.lineTo(v.dx / 2, v.dy / 2);
+      ctx.strokeStyle = stroke || fill || '#fff'; ctx.lineWidth = k.lw || 0.8; ctx.lineCap = 'round'; ctx.stroke();
+      break;
+    case 'p':
+      var n = Math.max(3, Math.round(k.n || 5)), inr = k['in'], cnt = inr > 0 ? n * 2 : n;
+      ctx.beginPath();
+      for (i = 0; i < cnt; i++){
+        var ang = -Math.PI / 2 + i * 6.2832 / cnt, rad = (inr > 0 && i % 2) ? v.r * inr : v.r;
+        if (i) ctx.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad); else ctx.moveTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
+      }
+      ctx.closePath();
+      if (fill){ ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = k.lw || 0.6; ctx.lineJoin = 'round'; ctx.stroke(); }
+      break;
+    case 't':
+      var sz = k.sz || 7, lh = (k.lh || 1.2) * sz;
+      ctx.font = (k.b === 0 ? 500 : 800) + ' ' + sz + 'px ' + (k.font ? '"' + k.font.replace(/"/g, '') + '", ' : '') + FONT;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      var ls = wrapText(ctx, v.text, k.mw), total = 0;
+      ls.forEach(function(l){ total += l.length; });
+      var rem = k.tw > 0 ? Math.floor(total * clamp01(u / k.tw)) : total;
+      if (stroke) ctx.lineWidth = k.lw || 0.6;
+      for (i = 0; i < ls.length; i++){
+        if (rem <= 0) break;
+        var ln = ls[i], w = ctx.measureText(ln).width;
+        var ox = k.al === 'l' ? 0 : (k.al === 'r' ? -w : -w / 2);
+        var yy = (i - (ls.length - 1) / 2) * lh, seg = ln.slice(0, rem);
+        rem -= ln.length;
+        if (stroke){ ctx.strokeStyle = stroke; ctx.strokeText(seg, ox, yy); }
+        ctx.fillStyle = fill || (stroke ? 'rgba(0,0,0,0)' : '#fff');
+        if (fill || !stroke) ctx.fillText(seg, ox, yy);
+      }
+      break;
+    case 'g':
+      var rows = v.rows.split('/'), cell = k.cell || 2, pal = (k.pal && k.pal.length) ? k.pal : ['#fff'], cols = 0;
+      rows.forEach(function(r){ cols = Math.max(cols, r.length); });
+      var gx = -cols * cell / 2, gy = -rows.length * cell / 2;
+      for (i = 0; i < rows.length; i++){
+        for (j = 0; j < rows[i].length; j++){
+          var ch = rows[i].charAt(j);
+          if (ch === '.' || ch === '_' || ch === ' ') continue;
+          var idx = parseInt(ch, 36);
+          ctx.fillStyle = pal[idx] || pal[0];
+          ctx.fillRect(gx + j * cell, gy + i * cell, cell + 0.03, cell + 0.03);
+        }
+      }
+      break;
+    case 'pt':
+      var cntp = Math.min(1500, Math.max(1, Math.round(k.n || 60))), pts = it._pts;
+      if (!pts){
+        var rnd = rng(k.seed || 1); pts = [];
+        for (i = 0; i < cntp; i++) pts.push([rnd(), rnd(), 0.5 + rnd(), rnd() * 6.2832]);
+        it._pts = pts;
+      }
+      var pw = v.w, ph = v.h, psz = k.sz || 0.5;
+      ctx.fillStyle = fill || '#fff';
+      for (i = 0; i < pts.length; i++){
+        var p = pts[i];
+        var px = mod(p[0] * pw + (k.vx || 0) * u, pw) - pw / 2;
+        var py = mod(p[1] * ph + (k.vy || 0) * u, ph) - ph / 2;
+        ctx.globalAlpha = al * (k.tw > 0 ? 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(6.2832 * k.tw * u + p[3])) : 1);
+        ctx.beginPath(); ctx.arc(px, py, psz * p[2], 0, 6.2832); ctx.fill();
+      }
+      break;
+  }
+  ctx.restore();
+}
+
+function drawScene(ctx, sc, t, S){
+  var Wpx = CW * S, Hpx = CH * S;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+  if (sc.bg.length > 1){
+    var g = ctx.createLinearGradient(0, 0, 0, Hpx);
+    g.addColorStop(0, sc.bg[0]); g.addColorStop(1, sc.bg[1]);
+    ctx.fillStyle = g;
+  } else ctx.fillStyle = sc.bg[0];
+  ctx.fillRect(0, 0, Wpx, Hpx);
+  ctx.setTransform(S, 0, 0, S, 0, 0);
+  for (var i = 0; i < sc.items.length; i++){
+    var it = sc.items[i];
+    if (t < it.a || t >= it.b) continue;
+    drawItem(ctx, sc, it, t, S);
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+//#PARSER-END
+
+var $ = function(id){ return document.getElementById(id); };
+var cv = $('cv'), ctx = cv.getContext('2d');
+var codeEl = $('code'), playB = $('play'), scrub = $('scrub'), tcEl = $('tc'), loopEl = $('loop'), resEl = $('res');
+var recB = $('rec'), saveB = $('save'), noteEl = $('note'), metaEl = $('meta'), logEl = $('log'), specEl = $('spec');
+var badge = $('badge'), badgeT = $('badgeT'), resultEl = $('result'), capEl = $('cap'), refEl = $('ref');
+var NOTE_DEFAULT = noteEl.textContent;
+var st = { t: 0, playing: false, start: 0, raf: 0, scene: parse(''), S: cv.width / CW, rec: null, blob: null, ext: 'mp4', dl: null, url: null, hidden: false, wake: null };
+
+function fmt(s){
+  var m = Math.floor(s / 60), r = s - m * 60;
+  return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r.toFixed(1);
+}
+function note(msg){ noteEl.textContent = msg; }
+
+function render(){
+  var d = st.scene.dur;
+  drawScene(ctx, st.scene, Math.min(st.t, d - 0.0001), st.S);
+  scrub.value = String(Math.round(st.t / d * 1000));
+  tcEl.textContent = fmt(st.t) + ' / ' + fmt(d);
+  badgeT.textContent = fmt(st.t);
+}
+function setCaption(){
+  capEl.textContent = 'kanwa 100 × 177,8 jedn. · ' + cv.width + ' × ' + cv.height + ' px · 30 kl./s';
+}
+function setRes(w){
+  cv.width = w; cv.height = Math.round(w * 16 / 9);
+  st.S = cv.width / CW;
+  setCaption(); render();
+}
+
+function setPlaying(on){
+  st.playing = on;
+  playB.textContent = on ? 'Pauza' : 'Odtwórz';
+  cancelAnimationFrame(st.raf);
+  if (on){
+    if (st.t >= st.scene.dur - 0.05) st.t = 0;
+    st.start = performance.now() - st.t * 1000;
+    st.raf = requestAnimationFrame(tick);
+  }
+}
+function tick(now){
+  if (!st.playing) return;
+  var d = st.scene.dur;
+  st.t = (now - st.start) / 1000;
+  if (st.t >= d){
+    if (st.rec){
+      st.t = d - 0.001; render(); setPlaying(false);
+      setTimeout(function(){ if (st.rec && st.rec.rec.state !== 'inactive') st.rec.rec.stop(); }, 300);
+      return;
+    }
+    if (loopEl.checked){ st.start = now; st.t = 0; }
+    else { st.t = d; render(); setPlaying(false); return; }
+  }
+  render();
+  st.raf = requestAnimationFrame(tick);
+}
+
+scrub.addEventListener('input', function(){
+  st.t = (Number(scrub.value) / 1000) * st.scene.dur;
+  if (st.playing) st.start = performance.now() - st.t * 1000;
+  render();
+});
+playB.addEventListener('click', function(){ setPlaying(!st.playing); });
+resEl.addEventListener('change', function(){ setRes(Number(resEl.value)); });
+
+/* Kod sceny */
+var onCodeTimer = 0;
+function onCode(){
+  st.scene = parse(codeEl.value);
+  if (st.t > st.scene.dur) st.t = st.scene.dur;
+  var n = st.scene.items.length;
+  metaEl.textContent = n + ' el. · ' + st.scene.dur.toFixed(1).replace('.', ',') + ' s';
+  logEl.textContent = '';
+  st.scene.errors.forEach(function(er){
+    var li = document.createElement('li'), b = document.createElement('b');
+    b.textContent = 'wiersz ' + er.line;
+    li.appendChild(b); li.appendChild(document.createTextNode(er.msg));
+    logEl.appendChild(li);
+  });
+  logEl.hidden = !st.scene.errors.length;
+  render();
+  try { localStorage.setItem('dekoder-shortow-kod', codeEl.value); } catch (e){}
+}
+codeEl.addEventListener('input', function(){ clearTimeout(onCodeTimer); onCodeTimer = setTimeout(onCode, 200); });
+
+function armed(btn, label, fn){
+  var orig = btn.textContent, timer = 0, on = false;
+  function reset(){ on = false; clearTimeout(timer); btn.textContent = orig; }
+  btn.addEventListener('click', function(){
+    if (!on){ on = true; btn.textContent = label; timer = setTimeout(reset, 3000); return; }
+    reset(); fn();
+  });
+}
+armed($('demo'), 'Na pewno? Nadpisze kod', function(){ codeEl.value = DEMO; st.t = 0; onCode(); st.t = st.scene.dur * 0.5; render(); });
+armed($('clear'), 'Na pewno? Usunie kod', function(){ codeEl.value = ''; onCode(); });
+
+var copyB = $('copy'), copyTimer = 0;
+function flash(msg){
+  var orig = 'Kopiuj opis formatu';
+  copyB.textContent = msg; clearTimeout(copyTimer);
+  copyTimer = setTimeout(function(){ copyB.textContent = orig; }, 2200);
+}
+function selectSpec(){
+  refEl.open = true;
+  var r = document.createRange(); r.selectNodeContents(specEl);
+  var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  flash('Zaznaczono, skopiuj ręcznie');
+}
+copyB.addEventListener('click', function(){
+  var txt = 'Piszesz sceny do mojego dekodera wideo (YouTube Shorts, 9:16). Odpowiadaj wyłącznie jednym blokiem kodu w tym formacie, bez komentarza:\n\n' + SPEC;
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ flash('Skopiowano'); }, selectSpec);
+  } else selectSpec();
+});
+specEl.textContent = SPEC;
+
+/* Nagrywanie */
+function pickMime(){
+  if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return null;
+  var c = ['video/mp4;codecs=avc1.640028', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  for (var i = 0; i < c.length; i++) if (MediaRecorder.isTypeSupported(c[i])) return c[i];
+  return null;
+}
+function lockUi(on){
+  codeEl.readOnly = on; resEl.disabled = on; loopEl.disabled = on; playB.disabled = on; scrub.disabled = on;
+  badge.hidden = !on;
+  recB.textContent = on ? 'Przerwij nagrywanie' : 'Nagraj wideo';
+}
+function releaseWake(){ try { if (st.wake) st.wake.release(); } catch (e){} st.wake = null; }
+
+function startRec(){
+  var mime = pickMime();
+  if (!mime || !cv.captureStream){
+    note('Ta przeglądarka nie nagrywa obrazu z canvasu. Otwórz stronę w nowszym Chrome, Edge lub Safari.');
+    return;
+  }
+  if (!st.scene.items.length){ note('Najpierw wklej kod sceny, bo nie ma czego nagrać.'); return; }
+  st.blob = null; saveB.hidden = true; resultEl.hidden = true;
+  if (st.url){ URL.revokeObjectURL(st.url); st.url = null; }
+  st.hidden = document.hidden;
+  var stream = cv.captureStream(30), chunks = [], rec;
+  try {
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: cv.width >= 1080 ? 10e6 : 6e6 });
+  } catch (e){
+    note('Nie udało się uruchomić nagrywania (' + (e && e.name || 'błąd') + ').');
+    return;
+  }
+  var ext = mime.indexOf('mp4') > -1 ? 'mp4' : 'webm';
+  rec.ondataavailable = function(ev){ if (ev.data && ev.data.size) chunks.push(ev.data); };
+  rec.onstop = function(){
+    stream.getTracks().forEach(function(tr){ tr.stop(); });
+    var cancelled = st.rec && st.rec.cancel;
+    st.rec = null; setPlaying(false); lockUi(false); releaseWake(); render();
+    if (cancelled){ note('Nagrywanie przerwane.'); return; }
+    var blob = new Blob(chunks, { type: ext === 'mp4' ? 'video/mp4' : 'video/webm' });
+    if (!blob.size){ note('Nagranie wyszło puste. Spróbuj jeszcze raz.'); return; }
+    st.blob = blob; st.ext = ext;
+    var mb = (blob.size / 1048576).toFixed(1).replace('.', ',');
+    note('Gotowe: ' + ext + ', ' + mb + ' MB, ' + st.scene.dur.toFixed(1).replace('.', ',') + ' s.' +
+      (st.hidden ? ' Karta była w tle, więc w nagraniu mogą być zacięcia.' : '') +
+      (st.dl ? '' : ' Zapis pliku jest tu niedostępny, otwórz artefakt w aplikacji Claude.'));
+    saveB.hidden = !st.dl;
+    st.url = URL.createObjectURL(blob);
+    resultEl.src = st.url; resultEl.hidden = false;
+  };
+  st.rec = { rec: rec, cancel: false };
+  lockUi(true);
+  try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(function(w){ st.wake = w; }, function(){}); } catch (e){}
+  setPlaying(false); st.t = 0; render();
+  rec.start(250);
+  note('Nagrywam. Nie przełączaj karty.');
+  setPlaying(true);
+}
+function cancelRec(){
+  if (!st.rec) return;
+  st.rec.cancel = true;
+  if (st.rec.rec.state !== 'inactive') st.rec.rec.stop();
+}
+recB.addEventListener('click', function(){ if (st.rec) cancelRec(); else startRec(); });
+resultEl.addEventListener('error', function(){ resultEl.hidden = true; });
+document.addEventListener('visibilitychange', function(){ if (st.rec && document.hidden) st.hidden = true; });
+
+saveB.addEventListener('click', function(){
+  if (!st.dl || !st.blob) return;
+  var d = new Date(), p2 = function(n){ return (n < 10 ? '0' : '') + n; };
+  var name = 'short-' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + '-' + p2(d.getHours()) + p2(d.getMinutes()) + '.' + st.ext;
+  st.dl.save({ filename: name, data: st.blob }).then(function(){
+    note('Zapisano plik ' + name + '.');
+  }, function(e){
+    var c = e && e.code;
+    if (c === 'declined') note('Zapis anulowany. Przycisk nadal działa, jeśli chcesz spróbować ponownie.');
+    else if (c === 'rate_limited') note('Poprzednie okno zapisu jest jeszcze otwarte. Zamknij je i spróbuj za chwilę.');
+    else if (c === 'too_large') note('Plik jest za duży do zapisu. Nagraj w 720 × 1280.');
+    else { note('Nie udało się zapisać pliku (' + (c || 'błąd') + ').'); }
+  });
+});
+if (window.claude && window.claude.use){
+  window.claude.use('downloads').then(function(d){
+    st.dl = d || null;
+    if (st.dl && st.blob) saveB.hidden = false;
+  }, function(){});
+}
+
+/* Start */
+var initial = '';
+try { initial = localStorage.getItem('dekoder-shortow-kod') || ''; } catch (e){}
+codeEl.value = initial.trim() ? initial : DEMO;
+setCaption();
+onCode();
+st.t = st.scene.dur * 0.5;
+render();
+if (document.fonts && document.fonts.load){
+  document.fonts.load('800 20px "Bricolage Grotesque"').then(function(){ if (!st.rec) render(); }, function(){});
+}
+})();
+</script>
