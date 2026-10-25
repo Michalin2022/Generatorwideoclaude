@@ -1,4 +1,4 @@
-<title>Dekoder Shortów</title>
+<title>Dekoder Wideo</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
@@ -154,7 +154,7 @@ textarea{
 (function(){
 'use strict';
 
-var DEMO = `// Przykład: scena pokazowa. Zastąp ją własnym kodem.
+var DEMO = `// Przykład: scena pokazowa. Zastąp ją własnym kodem od Clauda.
 bg #0b1030 #35185f
 dur 9
 pt 0- 50 88.9 100 178 n=90 sz=0.35 vy=-3 seed=7 tw=0.5 f=#d6deff
@@ -489,7 +489,7 @@ function setRes(w){
 
 function setPlaying(on){
   st.playing = on;
-  playB.textContent = on ? 'Pauza' : 'Odtwórz';
+  playB.textContent = on ? 'Zatrzymaj' : 'Odtwórz';
   cancelAnimationFrame(st.raf);
   if (on){
     if (st.t >= st.scene.dur - 0.05) st.t = 0;
@@ -583,14 +583,14 @@ function pickMime(){
 function lockUi(on){
   codeEl.readOnly = on; resEl.disabled = on; loopEl.disabled = on; playB.disabled = on; scrub.disabled = on;
   badge.hidden = !on;
-  recB.textContent = on ? 'Przerwij nagrywanie' : 'Nagraj wideo';
+  recB.textContent = on ? 'Anuluj nagrywanie' : 'Rozpocznij nagrywanie';
 }
 function releaseWake(){ try { if (st.wake) st.wake.release(); } catch (e){} st.wake = null; }
 
 function startRec(){
   var mime = pickMime();
   if (!mime || !cv.captureStream){
-    note('Ta przeglądarka nie nagrywa obrazu z canvasu. Otwórz stronę w nowszym Chrome, Edge lub Safari.');
+    note('Ta przeglądarka nie jest obsługiwana. Otwórz stronę w nowszym Chrome, Edge lub Safari.');
     return;
   }
   if (!st.scene.items.length){ note('Najpierw wklej kod sceny, bo nie ma czego nagrać.'); return; }
